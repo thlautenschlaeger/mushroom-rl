@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import os
 
 from mushroom_rl.algorithms.actor_critic import SAC
 from mushroom_rl.algorithms.actor_critic.deep_actor_critic.sac import OptionSAC
@@ -80,7 +81,7 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
     mdp = Gym('Pendulum-ID-v1', horizon, gamma)
     mdp.seed(seed)
     rarhmm = torch.load(
-        '/Users/kek/Documents/informatik/master/semester_3/thesis/code/mushroom-rl/mushroom_rl/sds/envs/hybrid/models/neural_rarhmm_pendulum_cart.pkl',
+        os.path.abspath(os.path.join(__file__, '..', '..')) + '/mushroom_rl/sds/envs/hybrid/models/neural_rarhmm_pendulum_cart.pkl',
         map_location='cpu')
     # mdp = Gym('Pendulum-v0', horizon, gamma)
 
