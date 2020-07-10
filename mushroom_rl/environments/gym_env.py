@@ -18,7 +18,7 @@ class Gym(Environment):
     are managed in a separate class.
 
     """
-    def __init__(self, name, horizon, gamma):
+    def __init__(self, name, horizon, gamma, **kwargs):
         """
         Constructor.
 
@@ -36,6 +36,12 @@ class Gym(Environment):
             self._close_at_stop = False
 
         self.env = gym.make(name)
+
+        # set to 100Herz for pendulum
+        if name == 'Pendulum-ID-v1':
+            self.env._max_episode_steps = 1000
+            self.env.unwrapped._dt = 0.01
+            self.env.unwrapped._sigma = 1e-4
 
         self.env._max_episode_steps = np.inf  # Hack to ignore gym time limit.
 

@@ -1,4 +1,9 @@
 from tqdm import tqdm
+import numpy as np
+import numpy.random as npr
+
+from mushroom_rl.algorithms.agent import OptionAgent
+from mushroom_rl.sds.envs.option_model import OptionSwitchingModel
 
 
 class Core(object):
@@ -147,7 +152,7 @@ class Core(object):
             self._current_steps_counter += 1
             steps_progress_bar.update(1)
 
-            if sample[-1]:
+            if sample[5]:
                 self._total_episodes_counter += 1
                 self._current_episodes_counter += 1
                 episodes_progress_bar.update(1)
@@ -162,7 +167,7 @@ class Core(object):
 
                 dataset = list()
 
-            last = sample[-1]
+            last = sample[5]
 
         self.agent.stop()
         self.mdp.stop()
@@ -233,3 +238,65 @@ class Core(object):
             state = p(state)
 
         return state
+
+
+class OptionCore(Core):
+
+    def __init__(self, agent: OptionAgent, mdp, option_switch_model: OptionSwitchingModel, callbacks_episode=None, callback_step=None,
+                 preprocessors=None):
+
+        super(OptionCore, self).__init__(agent, mdp, callbacks_episode=None, callback_step=None,
+                 preprocessors=None)
+
+        self.option_switch_model = option_switch_model
+
+    def _step(self, render):
+        """
+        Single step.
+
+        Args:
+            render (bool): whether to render or not.
+
+        Returns:
+            A tuple containing the previous state, the action sampled by the
+            agent, the reward obtained, the reached state, the absorbing flag
+            of the reached state and the last step flag.
+
+        """
+        if self._episode_steps == 0:
+            option_weights = np.ones(self.option_switch_model.n_options) / self.option_switch_model.n_options
+        else:
+            option_weights = self.option_switch_model.last_weights
+
+        option = npr.choice(self.option_switch_model.n_options, p=option_weights)
+        action = self.agent.draw_action(self._state, option)
+        option_weights = self.option_switch_model.get_transition_weights_reuse_logliks(self._state, action)
+        next_state, reward, absorbing, _ = self.mdp.step(action)
+
+        self._episode_steps += 1
+
+        if render:
+            self.mdp.render()
+
+        last = not(
+            self._episode_steps < self.mdp.info.horizon and not absorbing)
+
+        state = self._state
+        next_state = self._preprocess(next_state.copy())
+        self._state = next_state
+
+        return state, action, reward, next_state, absorbing, last, option, option_weights
+
+    def reset(self, initial_states=None):
+
+        if initial_states is None\
+            or self._total_episodes_counter == self._n_episodes:
+            initial_state = None
+        else:
+            initial_state = initial_states[self._total_episodes_counter]
+
+        self.option_switch_model.reset()
+        self._state = self._preprocess(self.mdp.reset(initial_state).copy())
+        self.agent.episode_start()
+        self.agent.next_action = None
+        self._episode_steps = 0

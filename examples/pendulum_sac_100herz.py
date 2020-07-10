@@ -10,6 +10,8 @@ from mushroom_rl.core import Core
 from mushroom_rl.environments.gym_env import Gym
 from mushroom_rl.utils.dataset import compute_J
 
+import mushroom_rl.sds
+
 
 class CriticNetwork(nn.Module):
     def __init__(self, input_shape, output_shape, n_features, **kwargs):
@@ -64,17 +66,20 @@ class ActorNetwork(nn.Module):
         return a
 
 
-def experiment(alg, n_epochs, n_steps, n_steps_test):
-    np.random.seed()
+def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     # MDP
-    horizon = 200
+    horizon = 1000
     gamma = 0.99
-    mdp = Gym('Pendulum-v0', horizon, gamma)
+    mdp = Gym('Pendulum-ID-v1', horizon, gamma)
+    mdp.seed(seed)
+    # mdp = Gym('Pendulum-v0', horizon, gamma)
 
     # Settings
     initial_replay_size = 64
-    max_replay_size = 50000
+    max_replay_size = 50000 * 4
     batch_size = 64
     n_features = 64
     warmup_transitions = 100
@@ -133,15 +138,22 @@ def experiment(alg, n_epochs, n_steps, n_steps_test):
         print('J: ', np.mean(J))
 
     print('Press a button to visualize pendulum')
-    input()
-    core.evaluate(n_episodes=5, render=True)
+    # input()
+    return core.evaluate(n_episodes=15, render=False)
 
 
 if __name__ == '__main__':
+    seed = 69420
     algs = [
         SAC
     ]
 
     for alg in algs:
         print('Algorithm: ', alg.__name__)
-        experiment(alg=alg, n_epochs=10, n_steps=1000, n_steps_test=2000)
+        dataset = experiment(alg=alg, n_epochs=5, n_steps=4000, n_steps_test=2000, seed=seed)
+
+    import matplotlib.pyplot as plt
+
+    lol = [d[0] for d in dataset[000:1000]]
+    plt.plot(lol)
+    plt.show()

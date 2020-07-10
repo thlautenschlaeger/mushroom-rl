@@ -345,3 +345,85 @@ class PrioritizedReplayMemory(object):
 
         """
         return self._tree.max_p if self.initialized else 1.
+
+
+class OptionReplayMemory(ReplayMemory):
+
+    def __init__(self, initial_size, max_size):
+        super(OptionReplayMemory, self).__init__(initial_size, max_size)
+
+        self._initial_size = initial_size
+        self._max_size = max_size
+
+        self.reset()
+
+    def add(self, dataset):
+        """
+        Add elements to the replay memory.
+
+        Args:
+            dataset (list): list of elements to add to the replay memory.
+
+        """
+        for i in range(len(dataset)):
+            self._states[self._idx] = dataset[i][0]
+            self._actions[self._idx] = dataset[i][1]
+            self._rewards[self._idx] = dataset[i][2]
+            self._next_states[self._idx] = dataset[i][3]
+            self._absorbing[self._idx] = dataset[i][4]
+            self._last[self._idx] = dataset[i][5]
+            self._options[self._idx] = dataset[i][6]
+            self._option_weights[self._idx] = dataset[i][7]
+
+            self._idx += 1
+            if self._idx == self._max_size:
+                self._full = True
+                self._idx = 0
+
+    def get(self, n_samples):
+        """
+        Returns the provided number of states from the replay memory.
+
+        Args:
+            n_samples (int): the number of samples to return.
+
+        Returns:
+            The requested number of samples.
+
+        """
+        s = list()
+        a = list()
+        r = list()
+        ss = list()
+        ab = list()
+        last = list()
+        op = list()
+        op_w = list()
+        for i in np.random.randint(self.size, size=n_samples):
+            s.append(np.array(self._states[i]))
+            a.append(self._actions[i])
+            r.append(self._rewards[i])
+            ss.append(np.array(self._next_states[i]))
+            ab.append(self._absorbing[i])
+            last.append(self._last[i])
+            op.append(self._options[i])
+            op_w.append(self._option_weights[i])
+
+        return np.array(s), np.array(a), np.array(r), np.array(ss), \
+               np.array(ab), np.array(last), np.array(op), np.array(op_w)
+
+    def reset(self):
+        """
+        Reset the replay memory.
+
+        """
+        self._idx = 0
+        self._full = False
+        self._states = [None for _ in range(self._max_size)]
+        self._actions = [None for _ in range(self._max_size)]
+        self._rewards = [None for _ in range(self._max_size)]
+        self._next_states = [None for _ in range(self._max_size)]
+        self._absorbing = [None for _ in range(self._max_size)]
+        self._last = [None for _ in range(self._max_size)]
+        self._options = [None for _ in range(self._max_size)]
+        self._option_weights = [None for _ in range(self._max_size)]

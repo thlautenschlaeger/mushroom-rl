@@ -6,9 +6,14 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from mushroom_rl.algorithms.actor_critic import SAC
+from mushroom_rl.algorithms.actor_critic.deep_actor_critic.sac import OptionSAC
 from mushroom_rl.core import Core
+from mushroom_rl.core.core import OptionCore
 from mushroom_rl.environments.gym_env import Gym
+from mushroom_rl.sds.envs.option_model import OptionSwitchingModel
 from mushroom_rl.utils.dataset import compute_J
+
+import mushroom_rl.sds
 
 
 class CriticNetwork(nn.Module):
@@ -64,20 +69,27 @@ class ActorNetwork(nn.Module):
         return a
 
 
-def experiment(alg, n_epochs, n_steps, n_steps_test):
-    np.random.seed()
+def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     # MDP
-    horizon = 200
+    horizon = 1000
     gamma = 0.99
-    mdp = Gym('Pendulum-v0', horizon, gamma)
+    mdp = Gym('Pendulum-ID-v1', horizon, gamma)
+    mdp.seed(seed)
+    rarhmm = torch.load(
+        '/Users/kek/Documents/informatik/master/semester_3/thesis/code/mushroom-rl/mushroom_rl/sds/envs/hybrid/models/neural_rarhmm_pendulum_cart.pkl',
+        map_location='cpu')
+    # mdp = Gym('Pendulum-v0', horizon, gamma)
 
     # Settings
-    initial_replay_size = 64
-    max_replay_size = 50000
-    batch_size = 64
-    n_features = 64
-    warmup_transitions = 100
+    initial_replay_size = 256
+    max_replay_size = 50000 * 4
+    batch_size = 512
+    n_features = 20
+    warmup_transitions = 500
     tau = 0.005
     lr_alpha = 3e-4
 
@@ -113,10 +125,12 @@ def experiment(alg, n_epochs, n_steps, n_steps_test):
     agent = alg(mdp.info, actor_mu_params, actor_sigma_params,
                 actor_optimizer, critic_params, batch_size, initial_replay_size,
                 max_replay_size, warmup_transitions, tau, lr_alpha,
-                critic_fit_params=None)
+                critic_fit_params=None, rarhmm=rarhmm)
+
+    option_switch_model = OptionSwitchingModel(rarhmm)
 
     # Algorithm
-    core = Core(agent, mdp)
+    core = OptionCore(agent, mdp, option_switch_model=option_switch_model)
 
     core.learn(n_steps=initial_replay_size, n_steps_per_fit=initial_replay_size)
 
@@ -133,15 +147,23 @@ def experiment(alg, n_epochs, n_steps, n_steps_test):
         print('J: ', np.mean(J))
 
     print('Press a button to visualize pendulum')
-    input()
-    core.evaluate(n_episodes=5, render=True)
+    # input()
+    return core.evaluate(n_episodes=15, render=False)
 
 
 if __name__ == '__main__':
+    seed = 69420
     algs = [
-        SAC
+        OptionSAC
     ]
 
     for alg in algs:
         print('Algorithm: ', alg.__name__)
-        experiment(alg=alg, n_epochs=10, n_steps=1000, n_steps_test=2000)
+        dataset = experiment(alg=alg, n_epochs=5, n_steps=4000, n_steps_test=2000, seed=seed)
+        # dataset = experiment(alg=alg, n_epochs=40, n_steps=5000, n_steps_test=2000)
+
+    import matplotlib.pyplot as plt
+
+    lol = [d[0] for d in dataset[0:1000]]
+    plt.plot(lol)
+    plt.show()

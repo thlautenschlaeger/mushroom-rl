@@ -230,3 +230,74 @@ class Agent(object):
     def _save_json(path, obj):
         with Path(path).open('w') as f:
             json.dump(obj, f)
+
+
+class OptionAgent(Agent):
+
+    def __init__(self, mdp_info, policy, n_options, features=None):
+        """
+        Constructor.
+
+        Args:
+            mdp_info (MDPInfo): information about the MDP;
+            policy (Policy): list of policies followed by the agent;
+            features (object, None): features to extract from the state.
+
+        """
+        super(OptionAgent, self).__init__(mdp_info, policy, features=None)
+        self.n_options = n_options
+        self.mdp_info = mdp_info
+        self.policy = policy
+
+        self.phi = features
+
+        self.next_action = None
+
+        self._add_save_attr(
+            mdp_info='pickle',
+            policy='pickle',
+            phi='pickle',
+            next_action='numpy'
+        )
+
+    def fit(self, dataset):
+        """
+        Fit step.
+
+        Args:
+            dataset (list): the dataset.
+
+        """
+        raise NotImplementedError('Agent is an abstract class')
+
+    def draw_action(self, state, option):
+        """
+        Return the action to execute in the given state. It is the action
+        returned by the policy or the action set by the algorithm (e.g. in the
+        case of SARSA).
+
+        Args:
+            state (np.ndarray): the state where the agent is.
+
+        Returns:
+            The action to be executed.
+
+        """
+        if self.phi is not None:
+            state = self.phi(state)
+
+        if self.next_action is None:
+            return self.policy[option].draw_action(state)
+        else:
+            action = self.next_action
+            self.next_action = None
+
+            return action
+
+    def episode_start(self):
+        """
+        Called by the agent when a new episode starts.
+
+        """
+        for o in range(self.n_options):
+            self.policy[o].reset()
