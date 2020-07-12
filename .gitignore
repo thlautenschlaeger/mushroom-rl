@@ -9,3 +9,10 @@ logs/
 .pytest_cache
 .coverage*
 /results/*.pkl
+/results/option_sac_pendulum100Hz_experiments.pkl
+/results/option_sac_pendulum100Hz_experiments_tanh.pkl
+/results/sac_cartpole100Hz_experiments.pkl
+/results/sac_pendulum100Hz_experiments.pkl
+/results/sac_pendulum100Hz_experiments_tanh.pkl
+
+*.DS_Store
