@@ -38,7 +38,7 @@ class Gym(Environment):
         self.env = gym.make(name)
 
         # set to 100Hz for pendulum
-        if name == 'Pendulum-ID-v1':
+        if name == 'Pendulum-ID-v1' or name == 'Cartpole-ID-v1':
             self.env._max_episode_steps = 1000
             self.env.unwrapped._dt = 0.01
             self.env.unwrapped._sigma = 1e-4

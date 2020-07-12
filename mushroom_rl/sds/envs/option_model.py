@@ -1,4 +1,6 @@
 import numpy as np
+import math
+
 from mushroom_rl.sds import rARHMM
 
 
@@ -32,6 +34,10 @@ class OptionSwitchingModel(object):
                                                                 logliks=[self.hist_inits_obs_loglik, self.hist_trans_loglik,
                                                                  self.hist_obs_loglik])
         weights = weights[0][-1, ...]
+
+        # a = [math.isnan(w) for w in weights]
+        # if any(a):
+        #     print("")
         self.last_weights = weights
         self.hist_inits_obs_loglik = tmp_logliks[0]
         self.hist_trans_loglik = tmp_logliks[1]

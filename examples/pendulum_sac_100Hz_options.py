@@ -56,15 +56,15 @@ class ActorNetwork(nn.Module):
         self._h3 = nn.Linear(n_features, n_output)
 
         nn.init.xavier_uniform_(self._h1.weight,
-                                gain=nn.init.calculate_gain('relu'))
+                                gain=nn.init.calculate_gain('tanh'))
         nn.init.xavier_uniform_(self._h2.weight,
-                                gain=nn.init.calculate_gain('relu'))
+                                gain=nn.init.calculate_gain('tanh'))
         nn.init.xavier_uniform_(self._h3.weight,
                                 gain=nn.init.calculate_gain('linear'))
 
     def forward(self, state):
-        features1 = F.relu(self._h1(torch.squeeze(state, 1).float()))
-        features2 = F.relu(self._h2(features1))
+        features1 = torch.tanh(self._h1(torch.squeeze(state, 1).float()))
+        features2 = torch.tanh(self._h2(features1))
         a = self._h3(features2)
 
         return a
@@ -86,11 +86,12 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
     # mdp = Gym('Pendulum-v0', horizon, gamma)
 
     # Settings
-    initial_replay_size = 256
+    initial_replay_size = 512
     max_replay_size = 50000 * 4
     batch_size = 512
-    n_features = 20
-    warmup_transitions = 500
+    n_critic_features = 64
+    n_actor_features = 24
+    warmup_transitions = 512
     tau = 0.005
     lr_alpha = 3e-4
 
@@ -99,12 +100,12 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
     # Approximator
     actor_input_shape = mdp.info.observation_space.shape
     actor_mu_params = dict(network=ActorNetwork,
-                           n_features=n_features,
+                           n_features=n_actor_features,
                            input_shape=actor_input_shape,
                            output_shape=mdp.info.action_space.shape,
                            use_cuda=use_cuda)
     actor_sigma_params = dict(network=ActorNetwork,
-                              n_features=n_features,
+                              n_features=n_actor_features,
                               input_shape=actor_input_shape,
                               output_shape=mdp.info.action_space.shape,
                               use_cuda=use_cuda)
@@ -117,7 +118,7 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
                          optimizer={'class': optim.Adam,
                                     'params': {'lr': 3e-4}},
                          loss=F.mse_loss,
-                         n_features=n_features,
+                         n_features=n_critic_features,
                          input_shape=critic_input_shape,
                          output_shape=(1,),
                          use_cuda=use_cuda)
@@ -135,10 +136,16 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
 
     core.learn(n_steps=initial_replay_size, n_steps_per_fit=initial_replay_size)
 
+    J_results = []
+    dataset_results = []
     # RUN
+
     dataset = core.evaluate(n_steps=n_steps_test, render=False)
+    gamma = 1 # set gamma to 1 to compute cummulated reward
     J = compute_J(dataset, gamma)
     print('J: ', np.mean(J))
+    J_results.append({'J_mean': np.mean(J), 'J_std': np.std(J)})
+    dataset_results.append(dataset)
 
     for n in range(n_epochs):
         print('Epoch: ', n)
@@ -146,22 +153,40 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
         dataset = core.evaluate(n_steps=n_steps_test, render=False)
         J = compute_J(dataset, gamma)
         print('J: ', np.mean(J))
+        J_results.append({'J_mean': np.mean(J), 'J_std': np.std(J)})
+        dataset_results.append(dataset)
 
     print('Press a button to visualize pendulum')
     # input()
-    return core.evaluate(n_episodes=15, render=False)
+    return core.evaluate(n_episodes=1, render=False), J_results, dataset_results
 
 
 if __name__ == '__main__':
-    seed = 69420
+    seeds = [42069, 69, 420, 1337, 404, 42, 9000, 300]
+    experiments = []
     algs = [
         OptionSAC
     ]
 
-    for alg in algs:
-        print('Algorithm: ', alg.__name__)
-        dataset = experiment(alg=alg, n_epochs=5, n_steps=4000, n_steps_test=2000, seed=seed)
-        # dataset = experiment(alg=alg, n_epochs=40, n_steps=5000, n_steps_test=2000)
+    for seed in seeds:
+        for alg in algs:
+            print('Algorithm: ', alg.__name__)
+            samples_per_episode = 4000
+            eval_steps = 10000
+            n_epochs = 5
+            dataset, J_results, dataset_results = experiment(alg=alg, n_epochs=n_epochs, n_steps=samples_per_episode, n_steps_test=eval_steps, seed=seed)
+            # dataset = experiment(alg=alg, n_epochs=40, n_steps=5000, n_steps_test=2000)
+            experiment_results = {'J_results': J_results,
+                                  'dataset_results': dataset_results,
+                                  'epochs': n_epochs,
+                                  'samples_per_episode': samples_per_episode,
+                                  'eval_steps': eval_steps,
+                                  'seed': seed}
+            experiments.append(experiment_results)
+
+
+    torch.save(experiments,
+               os.path.abspath(os.path.join(__file__, '..', '..')) + '/results/option_sac_pendulum100Hz_experiments_tanh.pkl')
 
     import matplotlib.pyplot as plt
 

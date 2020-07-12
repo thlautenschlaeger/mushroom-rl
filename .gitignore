@@ -8,3 +8,4 @@ logs/
 *.h5
 .pytest_cache
 .coverage*
+/results/*.pkl
