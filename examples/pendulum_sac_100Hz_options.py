@@ -90,7 +90,7 @@ def experiment(alg, n_epochs, n_steps, n_steps_test, seed):
     max_replay_size = 50000 * 4
     batch_size = 512
     n_critic_features = 64
-    n_actor_features = 24
+    n_actor_features = 14
     warmup_transitions = 512
     tau = 0.005
     lr_alpha = 3e-4

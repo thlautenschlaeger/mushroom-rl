@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 
-option_sac = torch.load('option_sac_cartpole100Hz_experiments_tanh.pkl')
-sac = torch.load('sac_cartpole100Hz_experiments_tanh.pkl')
+option_sac = torch.load('option_sac_cartpole100Hz_experiments.pkl')
+sac = torch.load('sac_cartpole100Hz_experiments.pkl')
 
 os_rewards = np.zeros((len(option_sac[0]['J_results'])))
 s_rewards = np.zeros((len(sac[0]['J_results'])))
