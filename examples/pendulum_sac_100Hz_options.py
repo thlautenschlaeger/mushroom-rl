@@ -173,7 +173,7 @@ if __name__ == '__main__':
             print('Algorithm: ', alg.__name__)
             samples_per_episode = 4000
             eval_steps = 10000
-            n_epochs = 5
+            n_epochs = 50
             dataset, J_results, dataset_results = experiment(alg=alg, n_epochs=n_epochs, n_steps=samples_per_episode, n_steps_test=eval_steps, seed=seed)
             # dataset = experiment(alg=alg, n_epochs=40, n_steps=5000, n_steps_test=2000)
             experiment_results = {'J_results': J_results,
@@ -188,8 +188,8 @@ if __name__ == '__main__':
     torch.save(experiments,
                os.path.abspath(os.path.join(__file__, '..', '..')) + '/results/option_sac_pendulum100Hz_experiments_tanh.pkl')
 
-    import matplotlib.pyplot as plt
-
-    lol = [d[0] for d in dataset[0:1000]]
-    plt.plot(lol)
-    plt.show()
+    # import matplotlib.pyplot as plt
+    #
+    # lol = [d[0] for d in dataset[0:1000]]
+    # plt.plot(lol)
+    # plt.show()
